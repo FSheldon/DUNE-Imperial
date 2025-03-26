@@ -1,0 +1,12 @@
+[
+    {
+      "name": "修行",
+      "faction": "贝尼·杰瑟里特",
+      "regions": ["绿色", "蓝色"],
+      "effect": "摸牌",
+      "output": "2说服",
+      "cost": 2,
+      "image": "assets/rawpic/修行.jpg"
+    }
+  ]
+  
