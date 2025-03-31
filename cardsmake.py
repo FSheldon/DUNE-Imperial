@@ -97,36 +97,48 @@ def add_effects(base_image, effects):
     # new_image = Image.new("RGBA", (card_width, card_height + base_height))
     # new_image.paste(base_image, (0, 0))
     # new_image.paste(base_overlay, (35, card_height), base_overlay)
-    base_image.paste(base_overlay, (35, card_height-base_height), base_overlay)
+    base_image.paste(base_overlay, (35, card_height-base_height-25), base_overlay)
     
     if not effects:
         return base_image, base_height
     
     # 处理效果图标
-    effect_images = []
+    effect_images_pers = []
+    effect_images_knife = []
+    has_persuasion = False  # 是否有“说服”效果
+    has_knife = False  # 是否有“刀”效果
+
     for effect in effects[:4]:
         if effect.startswith("说服"):
-            effect_img = Image.open(f"assets/textures/persuasion/{effect[2:]}.png").resize((80, 80)) 
+            effect_img = Image.open(f"assets/textures/persuasion/{effect[2:]}.png").resize((80, 80))
+            effect_images_pers.append(effect_img) 
+            has_persuasion = True  # 标记“说服”已出现
             #如果 effect 以 "说服" 开头，说明它是 “说服”类型 的效果，比如 "说服3"。
             #effect[2:] 取出 "说服" 后面的数字（如 "3"），用于加载相应的图片。
         elif effect.startswith("刀"):
             effect_img = Image.open("assets/textures/knife.png").resize((60,60)) 
-            for i in range(1, int(effect[1:])):
-                effect_images.append(effect_img)  # 添加多把刀
+            has_knife = True
+            for i in range(0, int(effect[1:])):
+                effect_images_knife.append(effect_img)  # 添加多把刀
         else:
             continue
-        
-        effect_images.append(effect_img)
+    
+    base_spacing = 20 if has_persuasion and has_knife else 0  # 只有两种效果同时出现时才加间距
+    effect_images = effect_images_pers + effect_images_knife
     
     # 计算图标位置（底部居中排列）
-    total_width = sum(img.width for img in effect_images) + (len(effect_images) - 1) * 5
+    total_width = sum(img.width for img in effect_images_pers) + base_spacing + int(sum(img.width for img in effect_images_knife) * 0.75)
     start_x = (card_width - total_width) // 2
-    y_pos = card_height + (base_height - effect_images[0].height) // 2
+    y_pos = card_height - 25 - (base_height + effect_images[0].height) // 2 #-25是减去底部边框
     
     x_offset = start_x
-    for img in effect_images:
+    for img in effect_images_pers:
         base_image.paste(img, (x_offset, y_pos), img)
-        x_offset += img.width + 10
+        x_offset += img.width + 20
+    
+    for img in effect_images_knife:
+        base_image.paste(img, (x_offset, y_pos + 15), img)
+        x_offset += img.width - 20
     
     return base_image, base_height
 
@@ -173,7 +185,7 @@ def add_rounded_border(base_image, border_thickness=30, column_width=35, corner_
 image_with_border = add_name("assets/rawpic/修行0.jpg", "修行")
 image_with_border = add_cost(image_with_border, 2)
 image_with_border = add_factions(image_with_border, ["Benny" ,"a"])
-effects_list = ["说服5"]
+effects_list = ["说服5","刀4"]
 image_with_border, overlay_height = add_effects(image_with_border, effects_list)
 image_with_border = add_rounded_border(image_with_border)
 
