@@ -2,7 +2,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 def add_name(image_path, name):
     # 打开图片
-    base_image = Image.open(image_path).convert("RGBA")
+    base_image = Image.open(image_path)
     width, height = base_image.size
 
     texture = Image.open("assets/textures/card_name_texture.jpg").resize((width, 80))    
@@ -17,7 +17,7 @@ def add_name(image_path, name):
     base_image.paste(bordered_texture, (-border_thickness, -border_thickness), bordered_texture)
 
     draw = ImageDraw.Draw(base_image)
-    draw.text((50, 30), name, font=font, fill="black")
+    draw.text((40, 30), name, font=font, fill="black")
     
     return base_image
 
@@ -44,9 +44,98 @@ def add_cost(base_image,cost):
 
     return base_image
     
+def add_factions(base_image, factions, margin=10):
+    """
+    在卡牌左侧粘贴势力图标。
+    
+    :param base_image: PIL.Image, 卡牌基础图片
+    :param factions: list[str], 需要粘贴的势力名称列表（最多 4 个）
+    :param margin: int, 势力图标之间的间隔
+    :return: PIL.Image, 添加势力图标后的图片
+    """
+    max_factions = min(len(factions), 4)  # 最多 4 个势力
+    width, height = base_image.size
+    icon_path = "assets/textures/factions/"  # 势力图标所在目录
+    icon_size = Image.open(icon_path + factions[0] + ".png").size  # 读取第一个势力图标的大小
+    icon_w, icon_h = icon_size
+    
+    # 计算起始 y 坐标，使图标在左侧居中排列
+    total_height = max_factions * icon_h + (max_factions - 1) * margin
+    start_y = 84
+    paste_x = margin  # 图标左侧固定间距
+    
+    for i in range(max_factions):
+        faction = factions[i]
+        try:
+            icon = Image.open(icon_path + faction + ".png").convert("RGBA")
+            base_image.paste(icon, (paste_x, start_y + i * (icon_h + 2)), icon)
+        except FileNotFoundError:
+            print(f"[警告] 势力图标 {faction}.png 未找到，跳过。")
+    
+    return base_image
+
+def add_effects(base_image, effects):
+    """
+    在卡牌底侧粘贴效果图标。
+    
+    :param base_image: PIL.Image, 卡牌基础图片
+    :param effects: list[str], 需要粘贴的效果名称列表（最多 4 个）
+    :return: PIL.Image, 添加效果图标后的图片 以及粘贴的底图片的 height
+    """
+    
+    # 加载底图片
+    base_overlay = Image.open("assets/textures/bottom.png")
+    base_width, base_height = base_overlay.size
+    
+    # 调整底图片宽度匹配卡牌
+    card_width, card_height = base_image.size
+    # scale_ratio = card_width / base_width
+    # base_overlay = base_overlay.resize((card_width , int(base_height * scale_ratio)))
+    # base_height = base_overlay.height
+    
+    # 计算粘贴位置
+    # new_image = Image.new("RGBA", (card_width, card_height + base_height))
+    # new_image.paste(base_image, (0, 0))
+    # new_image.paste(base_overlay, (35, card_height), base_overlay)
+    base_image.paste(base_overlay, (35, card_height-base_height), base_overlay)
+    
+    if not effects:
+        return base_image, base_height
+    
+    # 处理效果图标
+    effect_images = []
+    for effect in effects[:4]:
+        if effect.startswith("说服"):
+            effect_img = Image.open(f"assets/textures/persuasion/{effect[2:]}.png").resize((80, 80)) 
+            #如果 effect 以 "说服" 开头，说明它是 “说服”类型 的效果，比如 "说服3"。
+            #effect[2:] 取出 "说服" 后面的数字（如 "3"），用于加载相应的图片。
+        elif effect.startswith("刀"):
+            effect_img = Image.open("assets/textures/knife.png").resize((60,60)) 
+            for i in range(1, int(effect[1:])):
+                effect_images.append(effect_img)  # 添加多把刀
+        else:
+            continue
+        
+        effect_images.append(effect_img)
+    
+    # 计算图标位置（底部居中排列）
+    total_width = sum(img.width for img in effect_images) + (len(effect_images) - 1) * 5
+    start_x = (card_width - total_width) // 2
+    y_pos = card_height + (base_height - effect_images[0].height) // 2
+    
+    x_offset = start_x
+    for img in effect_images:
+        base_image.paste(img, (x_offset, y_pos), img)
+        x_offset += img.width + 10
+    
+    return base_image, base_height
+
 
 
 def add_rounded_border(base_image, border_thickness=30, column_width=35, corner_radius=30):
+    """
+    加边框 切圆
+    """
     # 打开图片
     base_image = base_image.convert("RGBA")
     width, height = base_image.size
@@ -83,6 +172,10 @@ def add_rounded_border(base_image, border_thickness=30, column_width=35, corner_
 # )
 image_with_border = add_name("assets/rawpic/修行0.jpg", "修行")
 image_with_border = add_cost(image_with_border, 2)
+image_with_border = add_factions(image_with_border, ["Benny" ,"a"])
+effects_list = ["说服5"]
+image_with_border, overlay_height = add_effects(image_with_border, effects_list)
 image_with_border = add_rounded_border(image_with_border)
+
 image_with_border.show()
 image_with_border.save("assets/cards/修行.png")
