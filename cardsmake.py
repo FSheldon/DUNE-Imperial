@@ -68,13 +68,13 @@ def add_factions(base_image, factions, margin=10):
         faction = factions[i]
         try:
             icon = Image.open(icon_path + faction + ".png").convert("RGBA")
-            base_image.paste(icon, (paste_x, start_y + i * (icon_h + 2)), icon)
+            base_image.paste(icon, (paste_x , start_y + i * (icon_h + 2)), icon)
         except FileNotFoundError:
             print(f"[警告] 势力图标 {faction}.png 未找到，跳过。")
     
     return base_image
 
-def add_effects(base_image, effects):
+def add_outputs(base_image, effects):
     """
     在卡牌底侧粘贴效果图标。
     
@@ -89,14 +89,6 @@ def add_effects(base_image, effects):
     
     # 调整底图片宽度匹配卡牌
     card_width, card_height = base_image.size
-    # scale_ratio = card_width / base_width
-    # base_overlay = base_overlay.resize((card_width , int(base_height * scale_ratio)))
-    # base_height = base_overlay.height
-    
-    # 计算粘贴位置
-    # new_image = Image.new("RGBA", (card_width, card_height + base_height))
-    # new_image.paste(base_image, (0, 0))
-    # new_image.paste(base_overlay, (35, card_height), base_overlay)
     base_image.paste(base_overlay, (35, card_height-base_height-25), base_overlay)
     
     if not effects:
@@ -140,9 +132,47 @@ def add_effects(base_image, effects):
         base_image.paste(img, (x_offset, y_pos + 15), img)
         x_offset += img.width - 20
     
-    return base_image, base_height
+    return base_image, base_height + 25 #output栏加边框高度 
 
+def add_effects(base_image, outputs_height, effects):
+    """
+    在卡牌底侧粘贴效果图标。
+    
+    :param base_image: PIL.Image, 卡牌基础图片
+    :param outputs_height: int, 输出栏的高度
+    :param effects: list[str], 需要粘贴的效果名称列表（最多 4 个）
+    :return: PIL.Image, 添加效果图标后的图片
+    """
+    base_overlay = Image.open("assets/textures/effect_bottom.png")
+    overlay_width, overlay_height = base_overlay.size
+    
+    card_width, card_height = base_image.size
+    base_image.paste(base_overlay, (35, card_height - overlay_height - outputs_height ), base_overlay)
 
+    return base_image, overlay_height + outputs_height
+
+def add_region(base_image , regions, effects_height, margin = 10):
+    
+    len_region = len(regions)
+    card_width, card_height = base_image.size
+    icon_path = "assets/textures/card_region_icon/"  # 势力图标所在目录
+    icon_size = Image.open(icon_path + regions[0] + ".png").size  # 读取第一个势力图标的大小
+    icon_w, icon_h = icon_size
+    
+    # 计算起始 y 坐标，使图标在左侧居中排列
+    total_height = len_region  * icon_h + (len_region  - 1) * margin
+    start_y = card_height - total_height - effects_height
+    paste_x = 35 # 图标左侧固定间距
+    
+    for i in range(len_region):
+        region = regions[i]
+        try:
+            icon = Image.open(icon_path + region + ".png").convert("RGBA")
+            base_image.paste(icon, (paste_x, start_y + i * (icon_h + 5)), icon)
+        except FileNotFoundError:
+            print(f"[警告] 区域图标 {region}.png 未找到，跳过。")
+    
+    return base_image
 
 def add_rounded_border(base_image, border_thickness=30, column_width=35, corner_radius=30):
     """
@@ -184,9 +214,11 @@ def add_rounded_border(base_image, border_thickness=30, column_width=35, corner_
 # )
 image_with_border = add_name("assets/rawpic/修行0.jpg", "修行")
 image_with_border = add_cost(image_with_border, 2)
-image_with_border = add_factions(image_with_border, ["Benny" ,"a"])
+image_with_border = add_factions(image_with_border, ["弗雷曼人","宇宙公会","贝尼·杰瑟里特姐妹会"])
 effects_list = ["说服5","刀4"]
-image_with_border, overlay_height = add_effects(image_with_border, effects_list)
+image_with_border, overlay_height = add_outputs(image_with_border, effects_list)
+image_with_border, overlay_height = add_effects(image_with_border, overlay_height, effects_list)
+image_with_border = add_region(image_with_border, ["立法会" ,"香料贸易"], overlay_height)
 image_with_border = add_rounded_border(image_with_border)
 
 image_with_border.show()
